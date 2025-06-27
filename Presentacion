@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diseño de Red para Biblioteca Pública</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Blue/Green Accents -->
+    <!-- Application Structure Plan: A single-page dashboard structure with a top navigation bar for smooth scrolling to thematic sections (Resumen, Escenario, Arquitectura, Direccionamiento, Ventajas). This non-linear approach is more user-friendly than the original report's format. The core is an interactive network diagram where users can filter by VLAN, which dynamically highlights components and updates descriptive text. This design choice transforms a static, text-heavy report into an exploratory tool, greatly enhancing usability and comprehension of the network's structure. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Project Overview -> Goal: Inform -> Viz/Method: Key metric cards -> Interaction: Hover effects -> Justification: Provides a quick, scannable summary.
+        - Report Info: Network Components/Needs -> Goal: Organize -> Viz/Method: Grid layout with icons and text -> Interaction: Static -> Justification: Clearly presents the foundational elements of the scenario.
+        - Report Info: Network Topology (Physical/Logical) -> Goal: Explore Relationships -> Viz/Method: Custom interactive network diagram (HTML/CSS/JS) -> Interaction: Clickable VLAN filter buttons highlight devices/paths and update a details pane -> Justification: This is the most effective way to demonstrate network segmentation and data flow without using complex graphics. Library: Custom JS.
+        - Report Info: IP/VLAN Allocation -> Goal: Compare/Detail -> Viz/Method: Chart.js Donut chart for device distribution & an interactive HTML table/visual for switch ports -> Interaction: Chart tooltips, hover on switch ports -> Justification: The chart visualizes proportions instantly, while the interactive switch diagram makes port allocation tangible. Library: Chart.js.
+        - Report Info: Project Advantages -> Goal: Inform -> Viz/Method: Accordion list -> Interaction: Click to expand/collapse -> Justification: Keeps the layout clean while allowing users to drill into details as needed.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .network-diagram .device, .network-diagram .line, .network-diagram .label {
+            transition: all 0.3s ease-in-out;
+        }
+        .vlan-inactive {
+            opacity: 0.2;
+        }
+        .line-vlan10 { border-color: #3b82f6; }
+        .device-vlan10 { border-color: #3b82f6; background-color: #dbeafe; }
+        .line-vlan20 { border-color: #16a34a; }
+        .device-vlan20 { border-color: #16a34a; background-color: #dcfce7; }
+        .line-vlan30 { border-color: #f97316; }
+        .device-vlan30 { border-color: #f97316; background-color: #ffedd5; }
+        .device-shared { border-color: #4b5563; background-color: #f3f4f6;}
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div class="font-bold text-xl text-slate-700">Proyecto de Red: Biblioteca</div>
+            <div class="hidden md:flex space-x-6">
+                <a href="#summary" class="text-slate-600 hover:text-blue-600">Resumen</a>
+                <a href="#scenario" class="text-slate-600 hover:text-blue-600">Escenario</a>
+                <a href="#architecture" class="text-slate-600 hover:text-blue-600">Arquitectura</a>
+                <a href="#addressing" class="text-slate-600 hover:text-blue-600">Direccionamiento</a>
+                <a href="#advantages" class="text-slate-600 hover:text-blue-600">Ventajas</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <section id="hero" class="text-center mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-600 mb-4">Diseño de Red para Biblioteca Pública</h1>
+            <p class="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">Una solución de red moderna, segura y segmentada para satisfacer las necesidades de personal y visitantes.</p>
+        </section>
+
+        <section id="summary" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">Resumen del Proyecto</h2>
+             <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+                <p class="text-slate-600 leading-relaxed">
+                    Este proyecto detalla el diseño conceptual de una red de área local (LAN) para una biblioteca pública pequeña. La arquitectura está diseñada para ofrecer conectividad segura y eficiente, separando el tráfico de la red administrativa del acceso público para visitantes y consultas. La solución implementa una topología en estrella y utiliza VLANs para una segmentación lógica que garantiza la integridad de los datos internos y optimiza el rendimiento general de la red.
+                </p>
+            </div>
+        </section>
+
+        <section id="scenario" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">Escenario y Requisitos</h2>
+            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold mb-4 text-blue-600">Usuarios y Equipos</h3>
+                    <p class="text-slate-600 mb-4">La infraestructura tecnológica de la biblioteca se compone de los siguientes elementos:</p>
+                    <ul class="space-y-3 text-slate-700">
+                        <li class="flex items-center"><span class="text-blue-500 mr-3">💻</span> 6 Computadoras para consulta pública.</li>
+                        <li class="flex items-center"><span class="text-blue-500 mr-3">🖥️</span> 3 Equipos para administración interna.</li>
+                        <li class="flex items-center"><span class="text-blue-500 mr-3">🗄️</span> 1 Servidor local para catálogo digital.</li>
+                        <li class="flex items-center"><span class="text-blue-500 mr-3">🖨️</span> 1 Impresora de red compartida.</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold mb-4 text-blue-600">Necesidades de Red</h3>
+                    <p class="text-slate-600 mb-4">Para un funcionamiento óptimo, la red debe cumplir con los siguientes requisitos:</p>
+                     <ul class="space-y-3 text-slate-700">
+                        <li class="flex items-start"><span class="text-green-500 mr-3 mt-1">🛡️</span> Separación efectiva del tráfico público y administrativo para proteger datos sensibles.</li>
+                        <li class="flex items-start"><span class="text-green-500 mr-3 mt-1">📶</span> Red Wi-Fi exclusiva para visitantes, con acceso únicamente a Internet.</li>
+                        <li class="flex items-start"><span class="text-green-500 mr-3 mt-1">🌐</span> Conectividad a Internet estable para consulta de bases de datos y recursos digitales.</li>
+                        <li class="flex items-start"><span class="text-green-500 mr-3 mt-1">🤝</span> Compartición eficiente de recursos (impresora y servidor) solo en la red administrativa.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-2">Arquitectura de Red Interactiva</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">La red utiliza una topología física en estrella y una topología lógica con VLANs. Haz clic en los botones para explorar cómo se segmenta la red.</p>
+            
+            <div class="flex justify-center space-x-2 md:space-x-4 mb-8">
+                <button onclick="filterVLAN('all')" class="vlan-btn bg-slate-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-slate-700 transition-colors">Ver Todo</button>
+                <button onclick="filterVLAN('vlan10')" class="vlan-btn bg-blue-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-600 transition-colors">VLAN 10: Admin</button>
+                <button onclick="filterVLAN('vlan20')" class="vlan-btn bg-green-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-green-700 transition-colors">VLAN 20: Pública</button>
+                <button onclick="filterVLAN('vlan30')" class="vlan-btn bg-orange-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-orange-600 transition-colors">VLAN 30: WiFi</button>
+            </div>
+
+            <div class="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-lg">
+                <div class="grid lg:grid-cols-3 gap-6 items-center">
+                    <div id="vlan-details" class="lg:col-span-1 p-6 rounded-lg bg-slate-100 min-h-[200px]">
+                        <h3 id="vlan-title" class="text-xl font-bold text-slate-800 mb-2">Visión General</h3>
+                        <p id="vlan-description" class="text-slate-600">Esta es una representación visual de la topología de red completa. Los dispositivos están conectados a un switch central, que a su vez se conecta al router para el acceso a Internet. Cada color representa una Red de Área Local Virtual (VLAN) diferente.</p>
+                    </div>
+
+                    <div class="lg:col-span-2 network-diagram relative h-[450px] md:h-[400px]">
+                        <!-- Dispositivos y Líneas -->
+                        <div class="device device-shared absolute top-[10%] left-1/2 -translate-x-1/2 w-24 text-center">
+                            <div class="p-2 border-2 rounded-lg">🌐</div><span class="label text-xs">Router</span>
+                        </div>
+                        <div class="line line-shared absolute top-[18%] left-1/2 w-0.5 h-[10%] bg-gray-400"></div>
+
+                        <div class="device device-shared absolute top-[28%] left-1/2 -translate-x-1/2 w-48 text-center">
+                            <div class="p-2 border-2 rounded-lg">🔄</div><span class="label text-xs">Switch Gestionable</span>
+                        </div>
+                        
+                        <!-- VLAN 10 -->
+                        <div class="line line-vlan10 absolute top-[36%] left-[20%] w-0.5 h-[12%] bg-blue-500 origin-top rotate-[-45deg]"></div>
+                        <div class="device device-vlan10 absolute top-[45%] left-[5%] w-24 text-center"><div class="p-2 border-2 rounded-lg">🖥️</div><span class="label text-xs">Admin PC</span></div>
+                        
+                        <div class="line line-vlan10 absolute top-[36%] left-[30%] w-0.5 h-[12%] bg-blue-500 origin-top rotate-[-25deg]"></div>
+                        <div class="device device-vlan10 absolute top-[48%] left-[20%] w-24 text-center"><div class="p-2 border-2 rounded-lg">🗄️</div><span class="label text-xs">Servidor</span></div>
+
+                        <div class="line line-vlan10 absolute top-[36%] left-[40%] w-0.5 h-[12%] bg-blue-500 origin-top rotate-[-10deg]"></div>
+                        <div class="device device-vlan10 absolute top-[50%] left-[35%] w-24 text-center"><div class="p-2 border-2 rounded-lg">🖨️</div><span class="label text-xs">Impresora</span></div>
+                        
+                        <!-- VLAN 20 -->
+                        <div class="line line-vlan20 absolute top-[36%] left-[60%] w-0.5 h-[12%] bg-green-600 origin-top rotate-[10deg]"></div>
+                        <div class="device device-vlan20 absolute top-[50%] left-[55%] w-24 text-center"><div class="p-2 border-2 rounded-lg">💻</div><span class="label text-xs">PC Pública 1</span></div>
+
+                        <div class="line line-vlan20 absolute top-[36%] left-[70%] w-0.5 h-[12%] bg-green-600 origin-top rotate-[25deg]"></div>
+                        <div class="device device-vlan20 absolute top-[48%] left-[70%] w-24 text-center"><div class="p-2 border-2 rounded-lg">💻</div><span class="label text-xs">PC Pública 2</span></div>
+                        
+                        <div class="line line-vlan20 absolute top-[36%] left-[80%] w-0.5 h-[12%] bg-green-600 origin-top rotate-[45deg]"></div>
+                        <div class="device device-vlan20 absolute top-[45%] left-[85%] w-24 text-center"><div class="p-2 border-2 rounded-lg">💻</div><span class="label text-xs">PC Pública 3</span></div>
+
+                        <!-- VLAN 30 -->
+                        <div class="line line-vlan30 absolute bottom-[25%] left-1/2 w-0.5 h-[12%] bg-orange-500"></div>
+                        <div class="device device-vlan30 absolute bottom-[5%] left-1/2 -translate-x-1/2 w-24 text-center"><div class="p-2 border-2 rounded-lg">📶</div><span class="label text-xs">Punto de Acceso WiFi</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="addressing" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">Plan de Direccionamiento y Puertos</h2>
+            <div class="grid lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold mb-4 text-blue-600">Configuración de VLANs</h3>
+                    <p class="text-slate-600 mb-4">La red está segmentada en tres VLANs para mejorar la seguridad y la gestión del tráfico.</p>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-100 border-l-4 border-blue-500 rounded">
+                            <p class="font-bold text-blue-800">VLAN 10: Administrativa</p>
+                            <p class="text-sm text-blue-700">Red: 192.168.10.0/24 | Gateway: 192.168.10.1</p>
+                        </div>
+                        <div class="p-4 bg-green-100 border-l-4 border-green-600 rounded">
+                            <p class="font-bold text-green-800">VLAN 20: Consulta Pública</p>
+                            <p class="text-sm text-green-700">Red: 192.168.20.0/24 | Gateway: 192.168.20.1</p>
+                        </div>
+                        <div class="p-4 bg-orange-100 border-l-4 border-orange-500 rounded">
+                            <p class="font-bold text-orange-800">VLAN 30: WiFi Visitantes</p>
+                            <p class="text-sm text-orange-700">Red: 192.168.30.0/24 | Gateway: 192.168.30.1</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold mb-4 text-center text-blue-600">Distribución de Equipos por VLAN</h3>
+                    <div class="chart-container">
+                        <canvas id="vlanChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="advantages" class="scroll-mt-20">
+             <h2 class="text-3xl font-bold text-center mb-8">Ventajas de la Arquitectura</h2>
+             <div class="max-w-3xl mx-auto space-y-4" id="accordion">
+                <div class="bg-white rounded-lg shadow-md">
+                    <button class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg accordion-header">
+                        <span>🛡️ Seguridad Mejorada</span>
+                        <span class="transform transition-transform duration-300">▼</span>
+                    </button>
+                    <div class="accordion-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out">
+                        <p class="p-5 pt-0 text-slate-600">La segmentación con VLANs es la principal ventaja de seguridad. Impide que los usuarios de la red pública y Wi-Fi puedan acceder a los recursos críticos de la red administrativa, como el servidor de la biblioteca y los equipos del personal. Esto protege los datos sensibles y previene accesos no autorizados.</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md">
+                    <button class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg accordion-header">
+                        <span>⚙️ Administración Simplificada</span>
+                         <span class="transform transition-transform duration-300">▼</span>
+                    </button>
+                    <div class="accordion-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out">
+                       <p class="p-5 pt-0 text-slate-600">La topología en estrella centraliza todas las conexiones en un único switch, lo que facilita enormemente la identificación y resolución de problemas. Si un dispositivo falla, no afecta al resto de la red. Además, la gestión de políticas de seguridad y acceso por VLAN simplifica la administración diaria.</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md">
+                    <button class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg accordion-header">
+                        <span>⚡ Rendimiento y Escalabilidad</span>
+                         <span class="transform transition-transform duration-300">▼</span>
+                    </button>
+                    <div class="accordion-content overflow-hidden max-h-0 transition-all duration-500 ease-in-out">
+                       <p class="p-5 pt-0 text-slate-600">Al separar el tráfico en dominios de broadcast más pequeños, las VLANs reducen el tráfico innecesario en la red, mejorando el rendimiento general. La arquitectura en estrella también es altamente escalable; agregar nuevos dispositivos es tan simple como conectar un cable al switch sin reconfigurar toda la red.</p>
+                    </div>
+                </div>
+             </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white mt-16 border-t">
+        <div class="container mx-auto px-6 py-6 text-center text-slate-500">
+            <p>Proyecto Final de Redes 1 - Universidad Latina de Costa Rica</p>
+            <p class="text-sm">Allison Arias, Ángel Montero, Cristopher Valverde, Dilan Sánchez, Keyston Núñez</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const vlanData = {
+                labels: ['Admin (VLAN 10)', 'Pública (VLAN 20)', 'WiFi (VLAN 30)'],
+                datasets: [{
+                    label: 'Número de Equipos',
+                    data: [5, 7, 1],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(22, 163, 74, 0.7)',
+                        'rgba(249, 115, 22, 0.7)'
+                    ],
+                    borderColor: [
+                        '#3b82f6',
+                        '#16a34a',
+                        '#f97316'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+
+            const vlanChartCtx = document.getElementById('vlanChart').getContext('2d');
+            new Chart(vlanChartCtx, {
+                type: 'doughnut',
+                data: vlanData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + ' equipos';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('span:last-child');
+                    
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = null);
+                        document.querySelectorAll('.accordion-header span:last-child').forEach(i => i.style.transform = 'rotate(0deg)');
+                        content.style.maxHeight = content.scrollHeight + "px";
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+        });
+
+        const vlanDetailsContent = {
+            all: {
+                title: 'Visión General de la Red',
+                description: 'Esta es una representación visual de la topología de red completa. Cada color representa una Red de Área Local Virtual (VLAN) diferente, segmentando el tráfico para mayor seguridad y eficiencia.'
+            },
+            vlan10: {
+                title: 'VLAN 10: Red Administrativa',
+                description: 'Esta VLAN es exclusiva para el personal. Conecta los equipos de administración, el servidor del catálogo y la impresora. Está aislada de las otras redes para proteger los datos internos sensibles.'
+            },
+            vlan20: {
+                title: 'VLAN 20: Red de Consulta Pública',
+                description: 'Conecta las computadoras de acceso público. Permite a los usuarios consultar recursos en Internet pero les impide acceder a la red administrativa, garantizando la seguridad de los sistemas de la biblioteca.'
+            },
+            vlan30: {
+                title: 'VLAN 30: Red Wi-Fi para Visitantes',
+                description: 'Ofrece conectividad inalámbrica a los visitantes a través de un punto de acceso dedicado. Esta red solo proporciona salida a Internet y está completamente separada de los recursos internos de la biblioteca.'
+            }
+        };
+
+        function filterVLAN(vlan) {
+            const diagram = document.querySelector('.network-diagram');
+            const devices = diagram.querySelectorAll('.device');
+            const lines = diagram.querySelectorAll('.line');
+            const detailsTitle = document.getElementById('vlan-title');
+            const detailsDesc = document.getElementById('vlan-description');
+
+            const elements = [...devices, ...lines];
+
+            detailsTitle.textContent = vlanDetailsContent[vlan].title;
+            detailsDesc.textContent = vlanDetailsContent[vlan].description;
+
+            if (vlan === 'all') {
+                elements.forEach(el => el.classList.remove('vlan-inactive'));
+            } else {
+                elements.forEach(el => {
+                    if (el.classList.contains(vlan) || el.classList.contains('device-shared') || el.classList.contains('line-shared')) {
+                        el.classList.remove('vlan-inactive');
+                    } else {
+                        el.classList.add('vlan-inactive');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
